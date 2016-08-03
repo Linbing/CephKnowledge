@@ -350,6 +350,9 @@ OSD部署
 ceph-deploy osd prepare cephnode11:[data]:[journal] cephnode12:[data]:[journal] ...
 ceph-deploy osd activate
 
+复制配置文件和密钥
+ceph-deploy admin cephnode11 cephnode12 cephnode13
+
 ## 参考
 
 [librbd-块存储库](http://www.wzxue.com/ceph-librbd-block-library/)

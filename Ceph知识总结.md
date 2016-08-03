@@ -340,12 +340,15 @@ cd ceph-cluster
 新建集群
 ceph-deploy new cephnode11 cephnode12 cephnode13
 
+创建monitor
+ceph-deploy mon create cephnode11 cephnode12 cephnode13
+
 初始化mon
 ceph-deploy mon create-initial
 
 OSD部署
 ceph-deploy osd prepare cephnode11:[data]:[journal] cephnode12:[data]:[journal] ...
-ceph-deploy osd 
+ceph-deploy osd activate
 
 ## 参考
 

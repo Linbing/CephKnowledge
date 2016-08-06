@@ -12,16 +12,16 @@ osd会检测自己和邻居的状态，并上报给monitor。
 
 ## Ceph集群图：
 
-Monitor map: mon节点信息，包括ceph结群id，监视器主机名，ip地址和端口号，从创
-建mon至今的epoch信息和修改的时间
+Monitor map: mon节点信息，包括ceph集群id，监视器主机名，ip地址和端口号，从创建mon至今的epoch信息和修改的时间
 
-OSD map:
+OSD map: 保存集群id，osd的创建和修改日期，还有跟池关联的一些信息，比如池的名称，ID，类型，副本级别和PG。
 
-PG map:
+PG map: 保存pg版本，时间戳，最后的OSD map的版本，full ratio，near full ratio。它还保存每个pg的id，
+对象数，状态，状态时间戳，up和acting的OSD集合，数据清洗详情。
 
-CRUSH map:
+CRUSH map: 保存集群中有关设备，桶，故障域等级和存储数据的规则集。
 
-MDS map: 
+MDS map: 保存当前map的版本，map创建和修改的时间，数据和元数据池的ID，集群的MDS数量和MDS状态。
 
 ## Ceph基础组件：
 
@@ -50,7 +50,7 @@ librbd: ceph的块存储库，利用Rados提供的API实现对块设备的管理
 ![模块关系图](OSD相关的软件模块视图.png)
 
 
-MSG:
+### MSG:
 
 上图中的MSG指的是Messenger类的实例，在OSD中使用的是其子类SimpleMessenger，其继承关系如下：
 
@@ -68,27 +68,50 @@ Async: 使用了基于事件IO的多路复用模式，这是比较通用的方�
 Xio: 使用了开源的网络通信模块accelio来实现，依赖第三方库，实现起来较简单，但需要熟悉accelio的使用
 方式，目前也处于试验阶段
 
-默认的`ms_type`类型为"simple"，创建的对象有：
+默认的`ms_type`类型为"simple"
 
-ms_public: 处理客户端的消息
+![OSD,Monitor和Client之间的连接](osd_messenger.jpg)
 
-ms_cluster: 处理其他OSD的消息
+ms_public: 处理来自Monitor和Client的连接
 
-ms_hbclient: 
+ms_cluster: 处理来自OSD peer的连接
 
-ms_hb_back_server:
+ms_hbclient: 心跳客户端，单独建立连接发送心跳，优先发送给back连接
 
-ms_hb_front_server:
+`ms_hb_back_server`: 接收来自back地址的心跳
 
-ms_objecter:
+`ms_hb_front_server`: 接收来自front地址的心跳
 
-MONC(Monitor Client):
+#### MSG通信模型
+
+![MSG通信模型](MSG_DISP.png)
+
+总体上，Ceph的消息处理框架是发布者订阅者的设计结构。Messenger担当发布者的角色，Dispatcher担当订阅者的角色。Messenger
+将接收到的消息通知给已注册的Dispatcher，由Dispatcher完成具体的消息处理。
+
+在服务端，SimpleMessenger通过Accepter实例监听端口，接收来自客户端的连接。Accepter接受客户端的连接后，为该连接创建一
+个Pipe实例。
+
+Pipe实例负责具体消息的接收和发送，一个Pipe实例包含一个读线程和一个写线程。读线程读取到消息后，有三种分发消息的方法：
+
+(1) 快速分发，直接在Pipe的读线程中处理掉消息。可快速分发的消息在Dispatcher的ms_can_fast_dispatch中注册。
+
+(2) 正常分发，将消息放入DispatchQueue，由单独的线程按照消息的优先级从高到低进行分发处理。需要注意的是，属于同一个
+SimpleMessenger实例的Pipe间使用同个DispatchQueue。
+
+(3) 延迟分发，为消息随机设置延迟时间，定时时间到时由单独的线程走快速分发或正常分发的流程分发消息。
+Pipe的写线程将消息放入out_q队列，按照消息的优先级从高到低发送消息。另外，消息(Message)中携带了seq序列号，Pipe使用
+`in_seq`和out_seq记录它接收到和发送出去的消息的序列号。发送消息时，Pipe用out_seq设置消息的序列号；接收消息时，通过比
+较消息的序列号和`in_seq`来确定消息是否为旧消息，如果为旧消息则丢弃，否则使用消息的序列号更新in_seq。
 
 
-PG与OSD:
+### MONC(Monitor Client):
 
 
-OS(ObjectStore):
+### PG与OSD:
+
+
+### OS(ObjectStore):
 
 
 ## RBD

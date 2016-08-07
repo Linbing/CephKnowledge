@@ -232,13 +232,13 @@ Ceph中的OSD节点将所有的对象存储在一个没有分层和目录的统�
 
 Creating:
 
-创建存储池时,它会创建指定数量的归置组。ceph 在创建一或多个归置组时会显示 creating;创建完后,在其归置组的 Acting Set
-里的 OSD 将建立互联;一旦互联完成,归置组状态应该变为 active+clean,意思是ceph 客户端可以向归置组写入数据了。
+创建存储池时,它会创建指定数量的归置组。ceph 在创建一或多个归置组时会显示creating;创建完后,在其归置组的 Acting Set
+里的 OSD 将建立互联;一旦互联完成,归置组状态应该变为active+clean,意思是ceph客户端可以向归置组写入数据了。
 
 Peering:
 
-ceph 为归置组建立互联时,会让存储归置组副本的 OSD 之间就其中的对象和元数据状态达成一致。ceph 完成了互联,也就意味着存储
-着归置组的 OSD 就其当前状态达成了一致。然而,互联过程的完成并不能表明各副本都有了数据的最新版本。
+ceph为归置组建立互联时,会让存储归置组副本的OSD之间就其中的对象和元数据状态达成一致。ceph 完成了互联,也就意味着存储
+着归置组的OSD就其当前状态达成了一致。然而,互联过程的完成并不能表明各副本都有了数据的最新版本。
 
 Active:
 
@@ -289,18 +289,52 @@ Stale:
 集群时,会经常看到 stale 状态,直到互联完成。集群运行一阵后,如果还能看到有归置组位于 stale 状态,就说明那些归置组的主
 OSD 挂了(down)、或没在向监视器报告统计信息。
 
-### peering过程
+### Peering过程
 
-peering的触发时机：
+#### Peering的作用
 
-OSD启动时，osd负责的所有pg，会触发peering，负责pg的osd状态发生变化时，会触发peering。
+Ceph用多副本来保证数据可靠性，一般设置为2或3个副本，每个pg，通过peering来使它的多个副本达到一致的状态。
 
-peering的流程：
+
+#### 一些相关的概念
+
+(1) Acting set：负责这个pg的所有osd的集合
+
+(2) Epoch：osdmap的版本号，单调递增，osdmap每变化一次，版本号加1
+
+(3) Past interval：一个epoch序列，在这个序列内，这个pg的acting set没有变化过
+
+(4) Last epoch start：上一次peering完成的epoch
+
+(5) up_thru：一个past interval内，第一次完成peering的epoch
+
+#### Peering的触发时机
+
+OSD启动时，osd负责的所有pg，会触发peering；负责pg的osd状态发生变化时，会触发peering。
+
+#### Peering的流程
 
 pg的副本有主从的角色，主负责协调整个peering过程，大致流程如下：
 
 (1) 生成past interval序列
 
+在每次osd map发生变化时，如果本pg的acting set有变化，则生成新的past interval，同时记录下上次的past interval
+
+(2) 选择需要参与peering的osd
+
+(3) 选取权威osd
+
+(4) Merge权威osd的log到primary
+
+   * 将缺失的log entry merge到本地的pg log
+
+   * 将merge的log entry对应的oid，填充到missing结构中
+
+(5) 对比修复各个副本的pg log
+
+   * 确定缺失的log区间
+
+   * 在稍后的activate函数中，将缺失的log发送到副本，同时将发送的log对应的oid填充到peer_missing结构中
 
 ###  recovery过程
 
@@ -308,11 +342,11 @@ pg的副本有主从的角色，主负责协调整个peering过程，大致流�
 
 recovery是对已知的副本不一致或者副本数不足进行修复。以pg为单位进行操作。大概有三个启动时机：
 
-(1) peering完成后
+*  peering完成后
 
-(2) scrub完成后
+*  scrub完成后
 
-(3) 读写操作时，操作的oid处于missing状态，则先recovery这个object。
+* 读写操作时，操作的oid处于missing状态，则先recovery这个object。
 
 OSD维护了一个recovery_wq的线程池，用于执行所有pg的recovery。
 
@@ -321,6 +355,12 @@ OSD维护了一个recovery_wq的线程池，用于执行所有pg的recovery。
 peering在某个pg由degrade状态重新恢复到active状态后启动。通过对比pg的每个osd的pglog，得到osd缺少的oid。Primary缺
 少的的放到pg\_log对象的missing结构中。Replica缺少的放到peer\_missing结构中。
 Recovery就是修复missing和peer_missing中的oid。
+
+TODO ![Recovery流程图]()
+
+Replica修复和Primary修复流程图
+
+TODO ![Replica修复和Primary修复流程图]()
 
 #### scrub后的recovery
 
@@ -332,6 +372,10 @@ Scrub后，会判断是否需要recovery。日常定时启动的scrub是不会�
 
 如果进行recovery，则流程同上。
 
-这样不太好，应该scrub后立即修复。假设2副本，其中一副本坏了一块儿盘，scrub检测到了这些丢失的副本，但没有修复。这些副本如果不被读写，或者很久没有peering，那这些副本将长期处于丢失状态。万一这段时间内，另外一份副本也出问题了，就会数据丢失。
+这样不太好，应该scrub后立即修复。假设2副本，其中一副本坏了一块儿盘，scrub检测到了这些丢失的副本，但没有修复。
+这些副本如果不被读写，或者很久没有peering，那这些副本将长期处于丢失状态。万一这段时间内，另外一份副本也出问
+题了，就会数据丢失。
 
+#### 读写操作前的Recovery
 
+TODO ![读写操作前的Recovery流程图]()

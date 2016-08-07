@@ -56,33 +56,83 @@ librbd: ceph的块存储库，利用Rados提供的API实现对块设备的管理
 
 ![Messenger类图](class_messenger.png)
 
-在OSD进程启动时，会根据配置的`ms_type`类型来实例化Messenger类，目前有三种不同的实现：
-Simple, Async和Xio
+#### 启动Messenger
 
-Simple: 相对比较简单，目前可以在生产环境中使用的模式。它最大的特点是，每一个连接，都创建两个线程，
+这里以ceph的osd服务为例来介绍Messenger，源码为`ceph_osd.cc`
+
+(1) 启动Messenger对象，总共有如下几个Messenger会被创建:
+
+* ms_public
+
+* ms_cluster
+
+* ms_hbclient
+
+* `ms_hb_back_server`
+
+* `ms_hb_front_server`
+
+* ms_objecter
+
+创建这些实例的时候，基类Messenger调用create方法，根据配置的`ms_type`类型来实例化具体的Messenger对象，目前的Messenger
+有三种不同的实现：
+SimpleMessenger, AsyncMessenger和XioMessenger
+
+SimpleMessenger: 相对比较简单，目前可以在生产环境中使用的模式。它最大的特点是，每一个连接，都创建两个线程，
 一个专门用于接收，一个专门用于发送
 
-Async: 使用了基于事件IO的多路复用模式，这是比较通用的方式，没有用第三方库，实现起来比较复杂，目前还
-处于试验阶段
+AsyncMessenger: 使用了基于事件IO的多路复用模式，这是比较通用的方式，没有用第三方库，实现起来比较复杂，目前还
+处于试验阶段 ，ceph源码中基于epoll来实现，有助于减少集群中网络通信所需要的线程数，目前虽然不是默认的通信组件，
+但是以后一定会取代SimpleMessenger
 
-Xio: 使用了开源的网络通信模块accelio来实现，依赖第三方库，实现起来较简单，但需要熟悉accelio的使用
+XioMessenger: 使用了开源的网络通信模块accelio来实现，依赖第三方库，实现起来较简单，但需要熟悉accelio的使用
 方式，目前也处于试验阶段
 
 默认的`ms_type`类型为"simple"
 
+(2) 设置Messenger的协议为CEPH_OSD_PROTOCOL
+
+```cpp
+set_cluster_protocol(CEPH_OSD_PROTOCOL);
+```
+(3) 设置两个throttler(流量控制器)，分别用于限制OSD在网络层接受client请求的消息大小和消息数量，默认为500M和100
+
+```cpp
+boost::scoped_ptr<Throttle> client_byte_throttler(new Throttle(g_ceph_context, "osd_client_bytes", g_conf->osd_client_message_size_cap));
+boost::scoped_ptr<Throttle> client_msg_throttler( new Throttle(g_ceph_context, "osd_client_messages", g_conf->osd_client_message_cap));
+```
+
+(4) 设置OSD服务支持的特性
+
+(5) 设置每个Messenger的policy
+
+(6) 绑定地址
+
+`ms_public`绑定到`g_conf->public_addr`上
+
+`ms_cluster`绑定到`g_cong->cluster_addr`上
+
+`ms_hb_back_server`绑定到`g_conf->hb_back_addr`上
+
+`ms_hb_front_server`绑定到`g_conf->hb_front_addr`上
+
+
+#### Messenger的作用
+
 ![OSD,Monitor和Client之间的连接](osd_messenger.jpg)
 
-ms_public: 处理来自Monitor和Client的连接
+从上可以看出，对于OSD服务而言，启动了多个Messenger监听器，每个监听器的作用如下，其中OSD节点会监听
+public、cluster、front和back四个端口。
 
-ms_cluster: 处理来自OSD peer的连接
+* public监听来自Monitor和Client的连接
 
-ms_hbclient: 心跳客户端，单独建立连接发送心跳，优先发送给back连接
+* cluster监听处理来自OSD peer的连接
 
-`ms_hb_back_server`: 接收来自back地址的心跳
+* 另外，OSD单独创建了一个名为hbclient的Messenger，作为心跳的客户端，单独用来建立连接发送心跳报文，心跳
+优先发送给back连接
 
-`ms_hb_front_server`: 接收来自front地址的心跳
 
-#### MSG通信模型
+#### 消息分发方式
 
 ![MSG通信模型](MSG_DISP.png)
 

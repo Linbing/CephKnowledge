@@ -104,6 +104,3 @@ ceph-deploy osd activate
 ceph-deploy admin cephnode11 cephnode12 cephnode13
 ```
 
-## 参考
-
-[librbd-块存储库](http://www.wzxue.com/ceph-librbd-block-library/)

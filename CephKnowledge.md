@@ -106,107 +106,155 @@ hash(oid) & mask -> pgid
 
 (3) PG->OSD
 
-第三次映射就是将作为object的逻辑组织单元的PG映射到数据的实际存储单元OSD。如图所示，RADOS采用一个名为CRUSH的算法，将pgid代入其中，然后得到一组共n个OSD。这n个OSD即共同负责存储和维护一个PG中的所有object。前已述及，n的数值可以根据实际应用中对于可靠性的需求而配置，在生产环境下通常为3。具体到每个OSD，则由其上运行的OSD deamon负责执行映射到本地的object在本地文件系统中的存储、访问、元数据维护等操作。
+第三次映射就是将作为object的逻辑组织单元的PG映射到数据的实际存储单元OSD。如图所示，RADOS采用一个名为CRUSH的算法，将pgid
+代入其中，然后得到一组共n个OSD。这n个OSD即共同负责存储和维护一个PG中的所有object。前已述及，n的数值可以根据实际应用中
+对于可靠性的需求而配置，在生产环境下通常为3。具体到每个OSD，则由其上运行的OSD deamon负责执行映射到本地的object在本地
+文件系统中的存储、访问、元数据维护等操作。
 
 和“object -> PG”映射中采用的哈希算法不同，这个CRUSH算法的结果不是绝对不变的，而是受到其他因素的影响。其影响因素主要有二：
 
-一是当前系统状态，也就是上文逻辑结构中曾经提及的cluster map。当系统中的OSD状态、数量发生变化时，cluster map可能发生变化，而这种变化将会影响到PG与OSD之间的映射。
+一是当前系统状态，也就是上文逻辑结构中曾经提及的cluster map。当系统中的OSD状态、数量发生变化时，cluster map可能发生
+变化，而这种变化将会影响到PG与OSD之间的映射。
 
-二是存储策略配置。这里的策略主要与安全相关。利用策略配置，系统管理员可以指定承载同一个PG的3个OSD分别位于数据中心的不同服务器乃至机架上，从而进一步改善存储的可靠性。
+二是存储策略配置。这里的策略主要与安全相关。利用策略配置，系统管理员可以指定承载同一个PG的3个OSD分别位于数据中心的不同
+服务器乃至机架上，从而进一步改善存储的可靠性。
 
-因此，只有在系统状态（cluster map）和存储策略都不发生变化的时候，PG和OSD之间的映射关系才是固定不变的。在实际使用当中，策略一经配置通常不会改变。而系统状态的改变或者是由于设备损坏，或者是因为存储集群规模扩大。好在Ceph本身提供了对于这种变化的自动化支持，因而，即便PG与OSD之间的映射关系发生了变化，也并不会对应用造成困扰。事实上，Ceph正是需要有目的的利用这种动态映射关系。正是利用了CRUSH的动态特性，Ceph可以将一个PG根据需要动态迁移到不同的OSD组合上，从而自动化地实现高可靠性、数据分布re-blancing等特性。
+因此，只有在系统状态（cluster map）和存储策略都不发生变化的时候，PG和OSD之间的映射关系才是固定不变的。在实际使用当中，
+策略一经配置通常不会改变。而系统状态的改变或者是由于设备损坏，或者是因为存储集群规模扩大。好在Ceph本身提供了对于这种变
+化的自动化支持，因而，即便PG与OSD之间的映射关系发生了变化，也并不会对应用造成困扰。事实上，Ceph正是需要有目的的利用这
+种动态映射关系。正是利用了CRUSH的动态特性，Ceph可以将一个PG根据需要动态迁移到不同的OSD组合上，从而自动化地实现高可靠
+性、数据分布re-blancing等特性。
 
-之所以在此次映射中使用CRUSH算法，而不是其他哈希算法，原因之一正是CRUSH具有上述可配置特性，可以根据管理员的配置参数决定OSD的物理位置映射策略；另一方面是因为CRUSH具有特殊的“稳定性”，也即，当系统中加入新的OSD，导致系统规模增大时，大部分PG与OSD之间的映射关系不会发生改变，只有少部分PG的映射关系会发生变化并引发数据迁移。这种可配置性和稳定性都不是普通哈希算法所能提供的。因此，CRUSH算法的设计也是Ceph的核心内容之一，具体介绍可以参考。
+之所以在此次映射中使用CRUSH算法，而不是其他哈希算法，原因之一正是CRUSH具有上述可配置特性，可以根据管理员的配置参数决定
+OSD的物理位置映射策略；另一方面是因为CRUSH具有特殊的“稳定性”，也即，当系统中加入新的OSD，导致系统规模增大时，大部分PG
+与OSD之间的映射关系不会发生改变，只有少部分PG的映射关系会发生变化并引发数据迁移。这种可配置性和稳定性都不是普通哈希算法
+所能提供的。因此，CRUSH算法的设计也是Ceph的核心内容之一，具体介绍可以参考。
 
-至此为止，Ceph通过三次映射，完成了从file到object、PG和OSD整个映射过程。通观整个过程，可以看到，这里没有任何的全局性查表操作需求。至于唯一的全局性数据结构cluster map，在后文中将加以介绍。可以在这里指明的是，cluster map的维护和操作都是轻量级的，不会对系统的可扩展性、性能等因素造成不良影响。
+至此为止，Ceph通过三次映射，完成了从file到object、PG和OSD整个映射过程。通观整个过程，可以看到，这里没有任何的全局性查
+表操作需求。至于唯一的全局性数据结构cluster map，它的维护和操作都是轻量级的，不会对系统的可扩展性、性能等因素造成不良影响。
 
-一个可能出现的困惑是：为什么需要同时设计第二次和第三次映射？难道不重复么？关于这一点，Sage在其论文中解说不多，而笔者个人的分析如下：
 
-我们可以反过来想像一下，如果没有PG这一层映射，又会怎么样呢？在这种情况下，一定需要采用某种算法，将object直接映射到一组OSD上。如果这种算法是某种固定映射的哈希算法，则意味着一个object将被固定映射在一组OSD上，当其中一个或多个OSD损坏时，object无法被自动迁移至其他OSD上（因为映射函数不允许），当系统为了扩容新增了OSD时，object也无法被re-balance到新的OSD上（同样因为映射函数不允许）。这些限制都违背了Ceph系统高可靠性、高自动化的设计初衷。
-
-如果采用一个动态算法（例如仍然采用CRUSH算法）来完成这一映射，似乎是可以避免静态映射导致的问题。但是，其结果将是各个OSD所处理的本地元数据量爆增，由此带来的计算复杂度和维护工作量也是难以承受的。
-
-例如，在Ceph的现有机制中，一个OSD平时需要和与其共同承载同一个PG的其他OSD交换信息，以确定各自是否工作正常，是否需要进行维护操作。由于一个OSD上大约承载数百个PG，每个PG内通常有3个OSD，因此，一段时间内，一个OSD大约需要进行数百至数千次OSD信息交换。
-
-然而，如果没有PG的存在，则一个OSD需要和与其共同承载同一个object的其他OSD交换信息。由于每个OSD上承载的object很可能高达数百万个，因此，同样长度的一段时间内，一个OSD大约需要进行的OSD间信息交换将暴涨至数百万乃至数千万次。而这种状态维护成本显然过高。
-
-综上所述，笔者认为，引入PG的好处至少有二：一方面实现了object和OSD之间的动态映射，从而为Ceph的可靠性、自动化等特性的实现留下了空间；另一方面也有效简化了数据的存储组织，大大降低了系统的维护管理开销。理解这一点，对于彻底理解Ceph的对象寻址机制，是十分重要的。
+从上可以看出，引入PG的好处至少有二：一方面实现了object和OSD之间的动态映射，从而为Ceph的可靠性、自动化等特性的实现留下
+了空间；另一方面也有效简化了数据的存储组织，大大降低了系统的维护管理开销。理解这一点，对于彻底理解Ceph的对象寻址机制，是
+十分重要的。
 
 ### 数据操作流程
 
 此处将首先以file写入过程为例，对数据操作流程进行说明。
 
-为简化说明，便于理解，此处进行若干假定。首先，假定待写入的file较小，无需切分，仅被映射为一个object。其次，假定系统中一个PG被映射到3个OSD上。
+为简化说明，便于理解，此处进行若干假定。这里假定待写入的file较小，无需切分，仅被映射为一个object。其次，假定系统中一个
+PG被映射到3个OSD上。
 
 基于上述假定，则file写入流程可以被下图表示：
 
 ![数据操作流程](数据操作流程.jpg)
 
-如图所示，当某个client需要向Ceph集群写入一个file时，首先需要在本地完成5.1节中所叙述的寻址流程，将file变为一个object，然后找出存储该object的一组三个OSD。这三个OSD具有各自不同的序号，序号最靠前的那个OSD就是这一组中的Primary OSD，而后两个则依次是Secondary OSD和Tertiary OSD。
+如图所示，当某个client需要向Ceph集群写入一个file时，首先需要在本地完成上述的寻址流程，将file变为一个object，然后找出
+存储该object的一组三个OSD。这三个OSD具有各自不同的序号，序号最靠前的那个OSD就是这一组中的Primary OSD，而后两个则依次
+是Secondary OSD和Tertiary OSD。
 
-找出三个OSD后，client将直接和Primary OSD通信，发起写入操作（步骤1）。Primary OSD收到请求后，分别向Secondary OSD和Tertiary OSD发起写入操作（步骤2、3）。当Secondary OSD和Tertiary OSD各自完成写入操作后，将分别向Primary OSD发送确认信息（步骤4、5）。当Primary OSD确信其他两个OSD的写入完成后，则自己也完成数据写入，并向client确认object写入操作完成（步骤6）。
+找出三个OSD后，client将直接和Primary OSD通信，发起写入操作（步骤1）。Primary OSD收到请求后，分别向Secondary OSD
+和Tertiary OSD发起写入操作（步骤2、3）。当Secondary OSD和Tertiary OSD各自完成写入操作后，将分别向Primary OSD
+发送确认信息（步骤4、5）。当Primary OSD确信其他两个OSD的写入完成后，则自己也完成数据写入，并向client确认object写入
+操作完成（步骤6）。
 
-之所以采用这样的写入流程，本质上是为了保证写入过程中的可靠性，尽可能避免造成数据丢失。同时，由于client只需要向Primary OSD发送数据，因此，在Internet使用场景下的外网带宽和整体访问延迟又得到了一定程度的优化。
+之所以采用这样的写入流程，本质上是为了保证写入过程中的可靠性，尽可能避免造成数据丢失。同时，由于client只需要向Primary 
+OSD发送数据，因此，在Internet使用场景下的外网带宽和整体访问延迟又得到了一定程度的优化。
 
-当然，这种可靠性机制必然导致较长的延迟，特别是，如果等到所有的OSD都将数据写入磁盘后再向client发送确认信号，则整体延迟可能难以忍受。因此，Ceph可以分两次向client进行确认。当各个OSD都将数据写入内存缓冲区后，就先向client发送一次确认，此时client即可以向下执行。待各个OSD都将数据写入磁盘后，会向client发送一个最终确认信号，此时client可以根据需要删除本地数据。
+当然，这种可靠性机制必然导致较长的延迟，特别是，如果等到所有的OSD都将数据写入磁盘后再向client发送确认信号，则整体延迟可
+能难以忍受。因此，Ceph可以分两次向client进行确认。当各个OSD都将数据写入内存缓冲区后，就先向client发送一次确认，此时
+client即可以向下执行。待各个OSD都将数据写入磁盘后，会向client发送一个最终确认信号，此时client可以根据需要删除本地数据。
 
-分析上述流程可以看出，在正常情况下，client可以独立完成OSD寻址操作，而不必依赖于其他系统模块。因此，大量的client可以同时和大量的OSD进行并行操作。同时，如果一个file被切分成多个object，这多个object也可被并行发送至多个OSD。
+分析上述流程可以看出，在正常情况下，client可以独立完成OSD寻址操作，而不必依赖于其他系统模块。因此，大量的client可以同
+时和大量的OSD进行并行操作。同时，如果一个file被切分成多个object，这多个object也可被并行发送至多个OSD。
 
 从OSD的角度来看，由于同一个OSD在不同的PG中的角色不同，因此，其工作压力也可以被尽可能均匀地分担，从而避免单个OSD变成性能瓶颈。
 
-如果需要读取数据，client只需完成同样的寻址过程，并直接和Primary OSD联系。目前的Ceph设计中，被读取的数据仅由Primary OSD提供。但目前也有分散读取压力以提高性能的讨论。
+如果需要读取数据，client只需完成同样的寻址过程，并直接和Primary OSD联系。目前的Ceph设计中，被读取的数据仅由Primary OSD
+提供。但目前也有分散读取压力以提高性能的讨论。
 
 ### 集群维护
 
-前面的介绍中已经提到，由若干个monitor共同负责整个Ceph集群中所有OSD状态的发现与记录，并且共同形成cluster map的master版本，然后扩散至全体OSD以及client。OSD使用cluster map进行数据的维护，而client使用cluster map进行数据的寻址。
+前面的介绍中已经提到，由若干个monitor共同负责整个Ceph集群中所有OSD状态的发现与记录，并且共同形成cluster map的master
+版本，然后扩散至全体OSD以及client。OSD使用cluster map进行数据的维护，而client使用cluster map进行数据的寻址。
 
-在集群中，各个monitor的功能总体上是一样的，其相互间的关系可以被简单理解为主从备份关系。因此，在下面的讨论中不对各个monitor加以区分。
+在集群中，各个monitor的功能总体上是一样的，其相互间的关系可以被简单理解为主从备份关系。因此，在下面的讨论中不对各个monitor
+加以区分。
 
-略显出乎意料的是，monitor并不主动轮询各个OSD的当前状态。正相反，OSD需要向monitor上报状态信息。常见的上报有两种情况：一是新的OSD被加入集群，二是某个OSD发现自身或者其他OSD发生异常。在收到这些上报信息后，monitor将更新cluster map信息并加以扩散。其细节将在下文中加以介绍。
+略显出乎意料的是，monitor并不主动轮询各个OSD的当前状态。正相反，OSD需要向monitor上报状态信息。常见的上报有两种情况：
+一是新的OSD被加入集群，二是某个OSD发现自身或者其他OSD发生异常。在收到这些上报信息后，monitor将更新cluster map信息并
+加以扩散。其细节将在下文中加以介绍。
 
 Cluster map的实际内容包括：
 
-（1） Epoch，即版本号。Cluster map的epoch是一个单调递增序列。Epoch越大，则cluster map版本越新。因此，持有不同版本cluster map的OSD或client可以简单地通过比较epoch决定应该遵从谁手中的版本。而monitor手中必定有epoch最大、版本最新的cluster map。当任意两方在通信时发现彼此epoch值不同时，将默认先将cluster map同步至高版本一方的状态，再进行后续操作。
+(1) Epoch，即版本号。
+Cluster map的epoch是一个单调递增序列。Epoch越大，则cluster map版本越新。因此，持有不同版本
+cluster map的OSD或client可以简单地通过比较epoch决定应该遵从谁手中的版本。而monitor手中必定有epoch最大、版本最新的
+cluster map。当任意两方在通信时发现彼此epoch值不同时，将默认先将cluster map同步至高版本一方的状态，再进行后续操作。
 
-（2）各个OSD的网络地址。
+(2) 各个OSD的网络地址。
 
-（3）各个OSD的状态。OSD状态的描述分为两个维度：up或者down（表明OSD是否正常工作），in或者out（表明OSD是否在至少一个PG中）。因此，对于任意一个OSD，共有四种可能的状态：
+(3) 各个OSD的状态。
+OSD状态的描述分为两个维度：up或者down（表明OSD是否正常工作），in或者out（表明OSD是否在至少一个PG中）。因此，对于任意
+一个OSD，共有四种可能的状态：
 
-—— Up且in：说明该OSD正常运行，且已经承载至少一个PG的数据。这是一个OSD的标准工作状态；
+* Up且in：说明该OSD正常运行，且已经承载至少一个PG的数据。这是一个OSD的标准工作状态；
 
-—— Up且out：说明该OSD正常运行，但并未承载任何PG，其中也没有数据。一个新的OSD刚刚被加入Ceph集群后，便会处于这一状态。而一个出现故障的OSD被修复后，重新加入Ceph集群时，也是处于这一状态；
+* Up且out：说明该OSD正常运行，但并未承载任何PG，其中也没有数据。一个新的OSD刚刚被加入Ceph集群后，便会处于这一状态。
+而一个出现故障的OSD被修复后，重新加入Ceph集群时，也是处于这一状态；
 
-—— Down且in：说明该OSD发生异常，但仍然承载着至少一个PG，其中仍然存储着数据。这种状态下的OSD刚刚被发现存在异常，可能仍能恢复正常，也可能会彻底无法工作；
+* Down且in：说明该OSD发生异常，但仍然承载着至少一个PG，其中仍然存储着数据。这种状态下的OSD刚刚被发现存在异常，可能仍能
+恢复正常，也可能会彻底无法工作；
 
-—— Down且out：说明该OSD已经彻底发生故障，且已经不再承载任何PG。
+* Down且out：说明该OSD已经彻底发生故障，且已经不再承载任何PG。
 
-（4）CRUSH算法配置参数。表明了Ceph集群的物理层级关系（cluster hierarchy），位置映射规则（placement rules）。
+(4) CRUSH算法配置参数。表明了Ceph集群的物理层级关系（cluster hierarchy），位置映射规则（placement rules）。
 
-根据cluster map的定义可以看出，其版本变化通常只会由（3）和（4）两项信息的变化触发。而这两者相比，（3）发生变化的概率更高一些。这可以通过下面对OSD工作状态变化过程的介绍加以反映。
+根据cluster map的定义可以看出，其版本变化通常只会由（3）和（4）两项信息的变化触发。而这两者相比，（3）发生变化的概率更
+高一些。这可以通过下面对OSD工作状态变化过程的介绍加以反映。
 
-一个新的OSD上线后，首先根据配置信息与monitor通信。Monitor将其加入cluster map，并设置为up且out状态，再将最新版本的cluster map发给这个新OSD。
+一个新的OSD上线后，首先根据配置信息与monitor通信。Monitor将其加入cluster map，并设置为up且out状态，再将最新版本的
+cluster map发给这个新OSD。
 
-收到monitor发来的cluster map之后，这个新OSD计算出自己所承载的PG（为简化讨论，此处我们假定这个新的OSD开始只承载一个PG），以及和自己承载同一个PG的其他OSD。然后，新OSD将与这些OSD取得联系。如果这个PG目前处于降级状态（即承载该PG的OSD个数少于正常值，如正常应该是3个，此时只有2个或1个。这种情况通常是OSD故障所致），则其他OSD将把这个PG内的所有对象和元数据复制给新OSD。数据复制完成后，新OSD被置为up且in状态。而cluster map内容也将据此更新。这事实上是一个自动化的failure recovery过程。当然，即便没有新的OSD加入，降级的PG也将计算出其他OSD实现failure recovery。
+收到monitor发来的cluster map之后，这个新OSD计算出自己所承载的PG（为简化讨论，此处我们假定这个新的OSD开始只承载一个PG），
+以及和自己承载同一个PG的其他OSD。然后，新OSD将与这些OSD取得联系。如果这个PG目前处于降级状态（即承载该PG的OSD个数少于正
+常值，如正常应该是3个，此时只有2个或1个。这种情况通常是OSD故障所致），则其他OSD将把这个PG内的所有对象和元数据复制给新
+OSD。数据复制完成后，新OSD被置为up且in状态。而cluster map内容也将据此更新。这事实上是一个自动化的failure recovery
+过程。当然，即便没有新的OSD加入，降级的PG也将计算出其他OSD实现failure recovery。
 
-如果该PG目前一切正常，则这个新OSD将替换掉现有OSD中的一个（PG内将重新选出Primary OSD），并承担其数据。在数据复制完成后，新OSD被置为up且in状态，而被替换的OSD将退出该PG（但状态通常仍然为up且in，因为还要承载其他PG）。而cluster map内容也将据此更新。这事实上是一个自动化的数据re-balancing过程。
+如果该PG目前一切正常，则这个新OSD将替换掉现有OSD中的一个（PG内将重新选出Primary OSD），并承担其数据。在数据复制完成后，
+新OSD被置为up且in状态，而被替换的OSD将退出该PG（但状态通常仍然为up且in，因为还要承载其他PG）。而cluster map内容也将
+据此更新。这事实上是一个自动化的数据re-balancing过程。
 
-如果一个OSD发现和自己共同承载一个PG的另一个OSD无法联通，则会将这一情况上报monitor。此外，如果一个OSD deamon发现自身工作状态异常，也将把异常情况主动上报给monitor。在上述情况下，monitor将把出现问题的OSD的状态设为down且in。如果超过某一预订时间期限，该OSD仍然无法恢复正常，则其状态将被设置为down且out。反之，如果该OSD能够恢复正常，则其状态会恢复为up且in。在上述这些状态变化发生之后，monitor都将更新cluster map并进行扩散。这事实上是自动化的failure detection过程。
+如果一个OSD发现和自己共同承载一个PG的另一个OSD无法联通，则会将这一情况上报monitor。此外，如果一个OSD deamon发现自身
+工作状态异常，也将把异常情况主动上报给monitor。在上述情况下，monitor将把出现问题的OSD的状态设为down且in。如果超过某
+一预订时间期限，该OSD仍然无法恢复正常，则其状态将被设置为down且out。反之，如果该OSD能够恢复正常，则其状态会恢复为up且
+in。在上述这些状态变化发生之后，monitor都将更新cluster map并进行扩散。这事实上是自动化的failure detection过程。
 
-由之前介绍可以看出，对于一个Ceph集群而言，即便由数千个甚至更多OSD组成，cluster map的数据结构大小也并不惊人。同时，cluster map的状态更新并不会频繁发生。即便如此，Ceph依然对cluster map信息的扩散机制进行了优化，以便减轻相关计算和通信压力。
+由之前介绍可以看出，对于一个Ceph集群而言，即便由数千个甚至更多OSD组成，cluster map的数据结构大小也并不惊人。同时，
+cluster map的状态更新并不会频繁发生。即便如此，Ceph依然对cluster map信息的扩散机制进行了优化，以便减轻相关计算和通
+信压力。
 
-首先，cluster map信息是以增量形式扩散的。如果任意一次通信的双方发现其epoch不一致，则版本更新的一方将把二者所拥有的cluster map的差异发送给另外一方。
+首先，cluster map信息是以增量形式扩散的。如果任意一次通信的双方发现其epoch不一致，则版本更新的一方将把二者所拥有的
+cluster map的差异发送给另外一方。
 
-其次，cluster map信息是以异步且lazy的形式扩散的。也即，monitor并不会在每一次cluster map版本更新后都将新版本广播至全体OSD，而是在有OSD向自己上报信息时，将更新回复给对方。类似的，各个OSD也是在和其他OSD通信时，将更新发送给版本低于自己的对方。
+其次，cluster map信息是以异步且lazy的形式扩散的。也即，monitor并不会在每一次cluster map版本更新后都将新版本广播至
+全体OSD，而是在有OSD向自己上报信息时，将更新回复给对方。类似的，各个OSD也是在和其他OSD通信时，将更新发送给版本低于自己的对方。
 
-基于上述机制，Ceph避免了由于cluster map版本更新而引起的广播风暴。这虽然是一种异步且lazy的机制，但根据Sage论文中的结论，对于一个由n个OSD组成的Ceph集群，任何一次版本更新能够在O(log(n))时间复杂度内扩散到集群中的任何一个OSD上。
+基于上述机制，Ceph避免了由于cluster map版本更新而引起的广播风暴。这虽然是一种异步且lazy的机制，但根据Sage论文中的结论，
+对于一个由n个OSD组成的Ceph集群，任何一次版本更新能够在O(log(n))时间复杂度内扩散到集群中的任何一个OSD上。
 
-一个可能被问到的问题是：既然这是一种异步和lazy的扩散机制，则在版本扩散过程中，系统必定出现各个OSD看到的cluster map不一致的情况，这是否会导致问题？答案是：不会。事实上，如果一个client和它要访问的PG内部的各个OSD看到的cluster map状态一致，则访问操作就可以正确进行。而如果这个client或者PG中的某个OSD和其他几方的cluster map不一致，则根据Ceph的机制设计，这几方将首先同步cluster map至最新状态，并进行必要的数据re-balancing操作，然后即可继续正常访问。
+一个可能被问到的问题是：既然这是一种异步和lazy的扩散机制，则在版本扩散过程中，系统必定出现各个OSD看到的cluster map不
+一致的情况，这是否会导致问题？答案是：不会。事实上，如果一个client和它要访问的PG内部的各个OSD看到的cluster map状态一致，
+则访问操作就可以正确进行。而如果这个client或者PG中的某个OSD和其他几方的cluster map不一致，则根据Ceph的机制设计，
+这几方将首先同步cluster map至最新状态，并进行必要的数据re-balancing操作，然后即可继续正常访问。
 
-通过上述介绍，我们可以简要了解Ceph究竟是如果基于cluster map机制，并由monitor、OSD和client共同配合完成集群状态的维护与数据访问的。特别的，基于这个机制，事实上可以自然而然的完成自动化的数据备份、数据re-balancing、故障探测和故障恢复，并不需要复杂的特殊设计。这一点确实让人印象深刻。
+通过上述介绍，我们可以简要了解Ceph究竟是如果基于cluster map机制，并由monitor、OSD和client共同配合完成集群状态的维护
+与数据访问的。特别的，基于这个机制，事实上可以自然而然的完成自动化的数据备份、数据re-balancing、故障探测和故障恢复，并
+不需要复杂的特殊设计。这一点确实让人印象深刻。
 
 
 ## Ceph模块间的关系
-
 
 ![模块关系图](OSD相关的软件模块视图.png)
 
@@ -256,6 +304,7 @@ XioMessenger: 使用了开源的网络通信模块accelio来实现，依赖第�
 ```cpp
 set_cluster_protocol(CEPH_OSD_PROTOCOL);
 ```
+
 (3) 设置两个throttler(流量控制器)，分别用于限制OSD在网络层接受client请求的消息大小和消息数量，默认为500M和100
 
 ```cpp
@@ -315,16 +364,6 @@ Pipe的写线程将消息放入out_q队列，按照消息的优先级从高到�
 `in_seq`和out_seq记录它接收到和发送出去的消息的序列号。发送消息时，Pipe用out_seq设置消息的序列号；接收消息时，通过比
 较消息的序列号和`in_seq`来确定消息是否为旧消息，如果为旧消息则丢弃，否则使用消息的序列号更新in_seq。
 
-
-### MONC(Monitor Client):
-
-
-### PG与OSD:
-
-
-### OS(ObjectStore):
-
-
 ## RBD
 
 Ceph的块存储有两种使用途径，一种是利用librbd，另一种是使用内核模块。第一种主要为虚拟机提供块存储设备，第二种主要为
@@ -339,28 +378,28 @@ kvm虚拟机使用rbd设备：
 ```sh
 rbd_device.xml
 
-<disk type='network' device='disk'>                                                                                                                                       
-  <driver name='qemu' type='raw' cache='writeback'/>                              
-  <auth username='admin'>                                                         
-    <secret type='ceph' uuid='e403fe43-3e9e-473b-9853-44ea881489d2'/>             
-  </auth>                                                                         
-  <source protocol='rbd' name='sata/test'>                                        
-    <host name='192.168.104.11' port='6789'/>                                     
-    <host name='192.168.104.12' port='6789'/>                                     
-    <host name='192.168.104.13' port='6789'/>                                     
-    <!--<snapshot name='snapname'/>-->                                            
-    <!--<config file='/path/to/file'/>-->                                         
-  </source>                                                                       
-  <target dev='vdc' bus='virtio'/>                                                
-  <!--<iotune>-->                                                                 
-    <!--<read_bytes_sec>209715200</read_bytes_sec>-->                             
-    <!--<write_bytes_sec>167772160</write_bytes_sec>-->                           
-    <!--<read_iops_sec>80</read_iops_sec>-->                                      
-    <!--<write_iops_sec>40</write_iops_sec>-->                                    
-    <!--</iotune>-->                                                              
-  <alias name='virtio-disk0'/>                                                    
-  <address type='pci' domain='0x0000' but='0x00' slot='0x07' function='0x0'/>  
-</disk>  
+<disk type='network' device='disk'>
+  <driver name='qemu' type='raw' cache='writeback'/>
+  <auth username='admin'>
+    <secret type='ceph' uuid='e403fe43-3e9e-473b-9853-44ea881489d2'/>
+  </auth>
+  <source protocol='rbd' name='sata/test'>
+    <host name='192.168.104.11' port='6789'/>
+    <host name='192.168.104.12' port='6789'/>
+    <host name='192.168.104.13' port='6789'/>
+    <!--<snapshot name='snapname'/>-->
+    <!--<config file='/path/to/file'/>-->
+  </source>
+  <target dev='vdc' bus='virtio'/>
+  <!--<iotune>-->
+    <!--<read_bytes_sec>209715200</read_bytes_sec>-->
+    <!--<write_bytes_sec>167772160</write_bytes_sec>-->
+    <!--<read_iops_sec>80</read_iops_sec>-->
+    <!--<write_iops_sec>40</write_iops_sec>-->
+    <!--</iotune>-->
+  <alias name='virtio-disk0'/>
+  <address type='pci' domain='0x0000' but='0x00' slot='0x07' function='0x0'/>
+</disk>
 ```
 
 使用`virsh attah-device <domain_id> rbd_device.xml`将ceph的rbd镜像附加到虚拟机里，在虚拟机里对应的设备为/dev/vdx
@@ -417,7 +456,8 @@ osd recovery max chunk 选项限制恢复数据块尺寸,以防网络拥塞。
 
 **Remapped:**
 
-某一PG的Acting Set变更时,数据要从旧集合迁移到新的。主OSD要花费一些时间才能提供服务,所以它可以让老的主OSD持续服务，直到归置组迁移完。数据迁移完后,主OSD会映射到新的acting set。
+某一PG的Acting Set变更时,数据要从旧集合迁移到新的。主OSD要花费一些时间才能提供服务,所以它可以让老的主OSD持续服务，直
+到归置组迁移完。数据迁移完后,主OSD会映射到新的acting set。
 
 **Stale:**
 
@@ -464,25 +504,25 @@ pg的副本有主从的角色，主负责协调整个peering过程，大致流�
 
 (4) Merge权威osd的log到primary
 
-   * 将缺失的log entry merge到本地的pg log
+* 将缺失的log entry merge到本地的pg log
 
-   * 将merge的log entry对应的oid，填充到missing结构中
+* 将merge的log entry对应的oid，填充到missing结构中
 
 (5) 对比修复各个副本的pg log
 
-   * 确定缺失的log区间
+* 确定缺失的log区间
 
-   * 在稍后的activate函数中，将缺失的log发送到副本，同时将发送的log对应的oid填充到peer_missing结构中
+* 在稍后的activate函数中，将缺失的log发送到副本，同时将发送的log对应的oid填充到peer_missing结构中
 
-###  recovery过程
+### recovery过程
 
 #### recovery的启动时机 
 
 recovery是对已知的副本不一致或者副本数不足进行修复。以pg为单位进行操作。大概有三个启动时机：
 
-*  peering完成后
+* peering完成后
 
-*  scrub完成后
+* scrub完成后
 
 * 读写操作时，操作的oid处于missing状态，则先recovery这个object。
 

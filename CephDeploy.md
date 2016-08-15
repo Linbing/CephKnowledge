@@ -1,8 +1,8 @@
-## ceph部署
+# ceph部署
 
-### 使用ceph-deploy部署
+## 使用ceph-deploy部署
 
-#### 添加ceph源
+### 添加ceph源
 
 ```sh
 vim /etc/yum.repos.d/ceph.repo
@@ -29,35 +29,46 @@ enabled=1
 gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-7
 ```
 
-#### 设置主机名并创建无密码ssh登录
+### 设置主机名并创建无密码ssh登录
 
 分别设置主机名
+
+```sh
 hostnamectl  set-hostname cephnode11
 hostnamectl  set-hostname cephnode12
 hostnamectl  set-hostname cephnode13
+```
 
 添加主机名和ip至/etc/hosts
+
+```sh
 192.168.104.11  cephnode11
 192.168.104.12  cephnode12
 192.168.104.13  cephnode13
+```
 
 创建公钥私钥对
+
+```sh
 ssh-keygen
 ssh-copy-id cephnode12
 ssh-copy-id cephnode13
+```
 
 #### 安装epel源
 
 ```sh
 rpm -vih http://mirrors.sohu.com/fedora-epel/7/x86_64/e/epel-release-7-2.noarch.rpm
 ```
-#### 安装ceph-deploy和ceph
+
+### 安装ceph-deploy和ceph
 
 ```sh
 yum install ceph-deploy ceph
 ```
 
 ### 磁盘初始化
+
 安装sgdisk
 
 ```sh
@@ -65,10 +76,16 @@ yum install -y gdisk
 ```
 
 mbr转为gpt
+
+```sh
 sgdisk -g /dev/sdx
+```
 
 清除之前的分区
+
+```sh
 sgdisk -o /dev/sdx
+```
 
 #### 创建ceph集群
 
@@ -84,23 +101,26 @@ ceph-deploy new cephnode11 cephnode12 cephnode13
 ```
 
 创建monitor
+
 ```sh
 ceph-deploy mon create cephnode11 cephnode12 cephnode13
 ```
 
 初始化mon
+
 ```sh
 ceph-deploy mon create-initial
 ```
 
 OSD部署
+
 ```sh
 ceph-deploy osd prepare cephnode11:[data]:[journal] cephnode12:[data]:[journal] ...
 ceph-deploy osd activate
 ```
 
 复制配置文件和密钥
+
 ```sh
 ceph-deploy admin cephnode11 cephnode12 cephnode13
 ```
-

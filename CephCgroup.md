@@ -1,6 +1,26 @@
 # Cgroup在Ceph中的应用
 
-## 一、Cgroup简介
+## 一、为什么在ceph中使用cgroup
+
+可能大家都会有这个疑问，为什么要用cgroup限制ceph的使用资源呢，主要的原因是为了防止在融合架构中ceph占用过多的内存和cpu，
+保证整体系统的稳定性。
+
+比如，从CPU的角度来说，monitor和osd都是典型的多线程程序，如果有多个线程都需要相同的数据，那么将这些线程绑定到一个特定的
+CPU上是非常有意义的，这样就能确保它们可以访问相同的缓存数据，从而至少能提高缓存命中率，否则的话，这些线程可能会在不同的
+CPU上执行，这样会频繁地使其他缓存项失效。但是像ceph这样动不动一个进程就有上百个线程的情况，绑定到一个CPU上或许有些不可
+取，一般的做法是一个线程分配一个核，所以在这种情况下，可以为所有的ceph进程分配几个核。
+
+还有就是关于ceph的内存占用，对于IO密集型的应用，cache能加速应用性能，经过测试发现ceph的缓存占用过多，所以需要限制下，
+目前给的限制是mon内存1G，缓存4G，osd的内存2G，缓存8G。虽然这样可能会导致ceph的性能降低，但是能保证与其它组件一起稳定
+运行。
+
+另外典型的故障就是由于磁盘IO过高导致ceph monitor挂掉，一般情况下非IO密集型的应用占用磁盘IO并不是很高，但ceph的mon是
+使用的系统盘，在与openstack的其它组件部署在一起的时候，磁盘IO过高就会导致monitor出现故障。
+
+下面两节就展开介绍cgroup和其使用方法，以及如何在ceph中实际应用cgroup来限制其是用资源，相信通过下面的讲解，你应该可以
+将cgroup成功应用到其他地方。
+
+## 二、Cgroup简介
 
 Cgroups是control groups的缩写，是Linux内核提供的一种可以限制、记录、隔离进程/进程组所使用的物理资源（如：CPU, Mem
 ory, IO等）的机制。最初由Google的工程师提出，后来被整合进Linux内核。
@@ -302,8 +322,8 @@ Restart=on-failure
 WantedBy=ceph-osd.target
 ```
 
-上面的两个systemd脚本相当于是一个模板，在部署ceph monitor的时候，会使用`systemctl enable ceph-osd@{monitor_name}
-.service创建用于开机启动的服务实例，如/etc/systemd/system/ceph-mon.target.wants/ceph-mon@ceph1.service，同
+上面的两个systemd脚本相当于是一个模板，在部署ceph monitor的时候，会使用`systemctl enable ceph-osd@{monitor_name}.service`
+创建用于开机启动的服务实例，如/etc/systemd/system/ceph-mon.target.wants/ceph-mon@ceph1.service，同
 样osd也是这样实现开机启动的。而systemd脚本中的`%i`就是monitor的名称或者osd的名称，取的是@后面.前面的字符串，更多关于
 脚本中类似的识别符，可以参考文档[systemd.unit中Specifiers一节](https://www.freedesktop.org/software/systemd/man/systemd.unit.html#Specifiers)。
 
@@ -313,7 +333,7 @@ WantedBy=ceph-osd.target
 将systemd脚本和cgroup配置好之后，所有monitor和osd服务启动之后，就会受cgroup的限制了，在/sys/fs/cgroup/中相应的子
 系统目录下就会生成相应的以group为名字的目录：
 
-```sh
+```plain
 [root@ceph1 memory]# ls /sys/fs/cgroup/memory/
 ceph-0                 memory.kmem.failcnt                 memory.limit_in_bytes            memory.pressure_level
 ceph-1                 memory.kmem.limit_in_bytes          memory.max_usage_in_bytes        memory.soft_limit_in_bytes
@@ -335,23 +355,6 @@ rules是调用ceph-disk将osd所对应的分区挂载上并且enable和start所�
 
 由于这是在Hammer版本上所作的修改，Hammer版本本身并没有使用systemd脚本，所以实现了类似打补丁的方式，在安装之后来启用
 systemd和cgroup限制，相应的ansible部署脚本为[ceph-systemd](https://git.oschina.net/zealoussnow/ceph-systemd)。
-
-通过以上示例，相信你已经基本理解cgroup的用途了，那为什么要用cgroup限制ceph的使用资源呢，其中一方面是为了防止在融合架构
-中ceph占用过多的内存和cpu，另一方面也是为了防止其它进程占用资源过多，导致ceph的进程出现故障。
-
-比如，从CPU的角度来说，monitor和osd都是典型的多线程程序，如果有多个线程都需要相同的数据，那么将这些线程绑定到一个特定的
-CPU上是非常有意义的，这样就能确保它们可以访问相同的缓存数据，从而至少能提高缓存命中率，否则的话，这些线程可能会在不同的
-CPU上执行，这样会频繁地使其他缓存项失效。但是像ceph这样动不动一个进程就有上百个线程的情况，绑定到一个CPU上或许有些不可
-取，一般的做法是一个线程分配一个核，所以在这种情况下，可以为所有的ceph进程分配几个核。
-
-还有就是关于ceph的内存占用，对于IO密集型的应用，cache能加速应用性能，经过测试发现ceph的缓存占用过多，所以需要限制下，
-目前给的限制是mon内存1G，缓存4G，osd的内存2G，缓存8G。虽然这样可能会导致ceph的性能降低，但是能保证与其它组件一起稳定
-运行。
-
-另外典型的故障就是由于磁盘IO过高导致ceph monitor挂掉，一般情况下非IO密集型的应用占用磁盘IO并不是很高，但ceph的mon是
-使用的系统盘，在与openstack的其它组件部署在一起的时候，磁盘IO过高就会导致monitor出现故障。
-
-当然，一般只需要限制cpu，cpuset和memory这些子系统就足以了。
 
 ## 参考链接
 

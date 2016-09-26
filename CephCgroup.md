@@ -252,7 +252,7 @@ group cgtest {
 
 其中的cpuset.cpus和cpuset.mems必须设置，不然会出错。
 
-## 二、在ceph中使用cgroup来限制所用资源
+## 三、在ceph中使用cgroup来限制所用资源
 
 有了以上cgroup的基础知识后，我们就可以在现有的ceph版本中加入cgroup限制策略，对于Hammer版本（即0.94.x)的ceph来说，
 由于它使用了sysvinit脚本来启动ceph服务，相对于systemd启动脚本来说太复杂了，修改起来也不是很方便，所以打算将sysvinit

@@ -191,15 +191,141 @@ journal_size = get_conf_with_default(
 `get_conf_with_default`这个函数会通过命令`ceph-osd --cluster ceph --show-config-value=osd_journal_size`
 来获取`journal_size`的值。
 
-2.准备journal
+2.创建journal文件或分区
 
-3.准备data
+journal可以使用一个文件或者一个分区
+
+如果journal是一个文件，则调用`prepare_journal_file`来创建journal文件：
+
+```python
+if not os.path.exists(journal):
+    LOG.debug('Creating journal file %s with size 0 (ceph-osd will resize and allocate)', journal)
+    with file(journal, 'wb') as journal_file:  # noqa
+        pass
+```
+
+如果journal是块设备，则调用`prepare_journal_dev`来创建journal分区，在`prepare_journal_dev`函数中，主要是用`sgdisk`
+命令创建journal分区:
+
+```python
+...
+command_check_call(
+    [
+        'sgdisk',
+        '--new={part}'.format(part=journal_part),
+        '--change-name={num}:ceph journal'.format(num=num),
+        '--partition-guid={num}:{journal_uuid}'.format(
+            num=num,
+            journal_uuid=journal_uuid,
+            ),
+        '--typecode={num}:{uuid}'.format(
+            num=num,
+            uuid=ptype_tobe,
+            ),
+        '--mbrtogpt',
+        '--',
+        journal,
+        ]
+    )
+...
+```
+
+3.创建osd数据的目录或分区
+
+如果指定存放osd数据的是目录，则调用`prepare_dir`函数创建osd数据目录以及一些标示文件，如`ceph_fsid`,`magic`，`whoami`等
+
+如果指定存放osd数据的是块设备，则调用`prepare_dev`函数创建一个新分区并修改改分区的卷标，分区uuid等信息：
+
+```python
+command_check_call(
+    [
+        'sgdisk',
+        '--largest-new=1',
+        '--change-name=1:ceph data',
+        '--partition-guid=1:{osd_uuid}'.format(
+            osd_uuid=osd_uuid,
+            ),
+        '--typecode=1:%s' % ptype_tobe,
+        '--',
+        data,
+    ],
+)
+```
 
 ## 四、ceph-disk activate
 
-## 五、ceph-disk activate-all
+`ceph-disk activate`的作用是激活分区，挂载osd数据分区并且启动osd服务
 
-## 六、ceph-disk zap
+1.激活分区
+
+首先根据配置或命令行参数获取挂载分区的配置参数，在`ceph-disk list`一节已经介绍过了，然后调用`mount`函数将分区挂载到
+一个临时的目录中，返回该临时目录，然后调用`activate`函数写入一些标示文件
+
+```python
+...
+path = mount(dev=dev, fstype=fstype, options=mount_options)
+
+osd_id = None
+cluster = None
+try:
+    (osd_id, cluster) = activate(path, activate_key_template, init)
+...
+```
+
+比如，在部署osd的时候，调用`ceph-disk activate`时会加入`--mark-init sysvinit`或者`--mark-init systemd`，则在
+activate函数中就会写入以sysvinit或者systemd为名称的一个空文件
+
+2.挂载osd数据分区
+
+先mount数据分区到osd的数据目录，然后再将之前挂载的临时目录卸载掉
+
+```python
+command_check_call(
+    [
+        '/bin/mount',
+        '-o',
+        mount_options,
+        '--',
+        dev,
+        osd_data,
+        ],
+    )
+command_check_call(
+    [
+        '/bin/umount',
+        '-l',   # lazy, in case someone else is peeking at the
+                # wrong moment
+        '--',
+        path,
+        ],
+    )
+```
+
+3.启动osd服务
+
+如果在命令行参数中没有指定`--mark-init`参数的话，就调用`ceph-osd`命令来启动osd服务进程，有的话就调用`start_daemon`，
+在`start_daemon`函数中，根据系统的init类型使用不同的命令来启动服务和允许开机启动，比如init类型为systemd的话，就调用
+systemctl命令：
+
+```python
+...
+elif os.path.exists(os.path.join(path, 'systemd')):
+    command_check_call(
+        [
+            'systemctl',
+            'enable',
+            'ceph-osd@{osd_id}'.format(osd_id=osd_id),
+        ],
+    )
+    command_check_call(
+        [
+            'systemctl',
+            'start',
+            'ceph-osd@{osd_id}'.format(osd_id=osd_id),
+        ],
+    )
+...
+```
 
 ## osd数据盘自动挂载
 
@@ -208,6 +334,7 @@ journal_size = get_conf_with_default(
 系统的`/usr/lib/udev/rules.d/`目录下，其中的部分规则如下：
 
 ```plain
+...
 # activate ceph-tagged partitions
 ACTION=="add", SUBSYSTEM=="block", \
   ENV{DEVTYPE}=="partition", \
@@ -219,4 +346,8 @@ ACTION=="add", SUBSYSTEM=="block", \
   ENV{DEVTYPE}=="partition", \
   ENV{ID_PART_ENTRY_TYPE}=="45b0969e-9b03-4f30-b4c6-b4b80ceff106", \
   RUN+="/usr/sbin/ceph-disk activate-journal /dev/$name"
+...
 ```
+
+这些规则在系统启动的时候会被执行，可以看到在`RUN+=`那行里执行了`ceph-disk activate`操作，这样就把分区类型的UUID为
+`OSD_UUID`的分区挂载到相应的目录并启动了osd服务

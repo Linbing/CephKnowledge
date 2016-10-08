@@ -62,3 +62,37 @@ The default Ceph Configuration file locations in sequential order include:
 3. /etc/ceph/ceph.conf
 4. ~/.ceph/config
 5. /ceph.conf
+
+Config Sections
+
+[global] 影响ceph集群中所有的守护进程
+
+[osd] 影响所有ceph-osd进程，会覆盖global中相同的设置
+
+[mon] 影响所有ceph-mon进程，会覆盖global中相同的设置
+
+[mds] 影响所有ceph-mds进程，会覆盖global中相同的设置
+
+[client] 影响所有的ceph客户端(已经挂载的ceph文件系统和块设备)
+
+如果指定的是一个ceph对象网关客户端，则要指定进程和实例名称，并用句号分隔，如
+
+[client.radosgw.instance-name]
+
+Metavariables(元变量)
+
+元变量简化了ceph的配置，当配置文件中设置了一个元变量的时候，ceph会展开成一个确切的值。ceph支持以下元变量：
+
+$cluster：展开为ceph集群的名称，当在同样的硬件上运行多个ceph集群时很有用，默认值是`ceph`
+
+$type: 展开为osd、mon或者mds，由实例的类型决定
+
+$id: 展开为进程标示符，比如osd.0，标示符为0，mds.a的标识符为a
+
+$host: 展开为实例的主机名
+
+$name: 展开为$type.$id
+
+$pid: 展开为进程id
+
+http://docs.ceph.com/docs/master/install/hardware-recommendations

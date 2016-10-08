@@ -145,6 +145,56 @@ for base, parts in sorted(partmap.iteritems()):
 
 ## 三、ceph-disk prepare
 
+`ceph-disk prepare`的作用是准备osd的data分区和journal分区，根据配置文件中设置的文件系统属性新建分区和文件系统，并在
+data分区中写入集群的信息，下面以前面的`ceph-disk prepare --cluster ceph --fs-type xfs /dev/sdb /dev/sda1`为例
+来说明prepare操作的具体流程：
+
+1.检测data和journal分区，得到所需的配置参数
+
+首先是检测data和journal分区是否是块设备以及是否已经被挂载
+
+```python
+dmode = os.stat(args.data).st_mode
+if stat.S_ISBLK(dmode):
+    verify_not_in_use(args.data, True)
+
+...
+if args.journal and os.path.exists(args.journal):
+    jmode = os.stat(args.journal).st_mode
+    if stat.S_ISBLK(jmode):
+        verify_not_in_use(args.journal, False)
+```
+
+然后获取需要的配置参数，这里的配置参数可以从命令行中手动指定，也可以从配置文件中获取。比如`--fs_type`这个配置是在命令
+行上指定的，那么就会优先使用这个参数，如果没有指定，才从配置文件中获取。在这一步中，获取的配置主要有：
+
+* fsid: 集群的UUID
+
+* osd_mkfs_type: osd分区所用的文件系统类型
+
+* osd_mkfs_options_{fstype}: 制作文件系统时所用的属性，这里的fstype根据命令行传入的`--fs_type`的参数或者从配置文件中获取的`osd_fs_type`来选择相应的文件系统类型
+
+* osd_mount_options_{fstype}：挂载data分区时所用的属性，一般要在配置文件中指定
+
+* osd_journal_size: 指定journal的大小，默认是5G
+
+上述的这些配置，如果在命令行或者配置文件中都没有指定的话，就获取ceph的默认配置，比如`osd_journal_size`：
+
+```python
+journal_size = get_conf_with_default(
+    cluster=args.cluster,
+    variable='osd_journal_size',
+)
+...
+```
+
+`get_conf_with_default`这个函数会通过命令`ceph-osd --cluster ceph --show-config-value=osd_journal_size`
+来获取`journal_size`的值。
+
+2.准备journal
+
+3.准备data
+
 ## 四、ceph-disk activate
 
 ## 五、ceph-disk activate-all

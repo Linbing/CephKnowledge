@@ -39,4 +39,26 @@ can break.
 
 ### Configuration Ceph
 
+For your convenience, each daemon has a series of default values(common/config_opts.h)
 
+#### The Configuration File
+
+The Ceph Configuration file defines:
+
+* Cluster Identify
+* Authentication settings
+* Cluster membership
+* Host names
+* Host addresses
+* Paths to keyrings
+* Paths to journals
+* Paths to data
+* Other runtime options
+
+The default Ceph Configuration file locations in sequential order include:
+
+1. $CEPH_CONF
+2. -c path/path(the -c command line argument)
+3. /etc/ceph/ceph.conf
+4. ~/.ceph/config
+5. /ceph.conf

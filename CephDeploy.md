@@ -116,7 +116,14 @@ OSD部署
 
 ```sh
 ceph-deploy osd prepare cephnode11:[data]:[journal] cephnode12:[data]:[journal] ...
-ceph-deploy osd activate
+ceph-deploy osd activate cephnode11:[data]
+```
+
+也可以使用`create`命令方便来代替`prepare`和`activate`，它会顺序执行`prepare`和`activate`操作
+
+```sh
+ceph-deploy osd create {node-name}:{disk}[:{path/to/journal}]
+ceph-deploy osd create osdserver:sdb:/dev/sdc1
 ```
 
 复制配置文件和密钥

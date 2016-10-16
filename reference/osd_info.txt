@@ -1,0 +1,143 @@
+[root@ceph1 shm]# ceph osd tree
+ID  WEIGHT   TYPE NAME                                                                       UP/DOWN REWEIGHT PRIMARY-AFFINITY
+ -6 36.34338 root pool-90f6bb5eca124118a7ad3609a2393af3-root
+ -7  9.08585     host pool-90f6bb5eca124118a7ad3609a2393af3-0e7fb53cd87e47c7892206081955360c
+ 19  0.90858         osd.19                                                                     down        0          1.00000
+ 12  0.90858         osd.12                                                                     down        0          1.00000
+ 11  0.90858         osd.11                                                                     down        0          1.00000
+ 18  0.90858         osd.18                                                                     down        0          1.00000
+ 17  0.90858         osd.17                                                                     down        0          1.00000
+ 16  0.90858         osd.16                                                                     down        0          1.00000
+ 15  0.90858         osd.15                                                                     down        0          1.00000
+ 14  0.90858         osd.14                                                                     down        0          1.00000
+ 13  0.90858         osd.13                                                                     down        0          1.00000
+ 10  0.90858         osd.10                                                                     down        0          1.00000
+ -8  9.08585     host pool-90f6bb5eca124118a7ad3609a2393af3-b11ddf30c61d4718853f0e48afacc9bb
+ 32  0.90858         osd.32                                                                       up  1.00000          1.00000
+ 31  0.90858         osd.31                                                                       up  1.00000          1.00000
+ 35  0.90858         osd.35                                                                       up  1.00000          1.00000
+ 39  0.90858         osd.39                                                                       up  1.00000          1.00000
+ 34  0.90858         osd.34                                                                       up  1.00000          1.00000
+ 38  0.90858         osd.38                                                                       up  1.00000          1.00000
+ 37  0.90858         osd.37                                                                       up  1.00000          1.00000
+ 36  0.90858         osd.36                                                                       up  1.00000          1.00000
+ 30  0.90858         osd.30                                                                       up  1.00000          1.00000
+ 33  0.90858         osd.33                                                                       up  1.00000          1.00000
+ -9  9.08585     host pool-90f6bb5eca124118a7ad3609a2393af3-786e25aa8e53458caae85dc49a046b24
+ 28  0.90858         osd.28                                                                       up  1.00000          1.00000
+ 29  0.90858         osd.29                                                                       up  1.00000          1.00000
+ 27  0.90858         osd.27                                                                       up  1.00000          1.00000
+ 26  0.90858         osd.26                                                                       up  1.00000          1.00000
+ 20  0.90858         osd.20                                                                       up  1.00000          1.00000
+ 23  0.90858         osd.23                                                                       up  1.00000          1.00000
+ 22  0.90858         osd.22                                                                       up  1.00000          1.00000
+ 25  0.90858         osd.25                                                                       up  1.00000          1.00000
+ 21  0.90858         osd.21                                                                       up  1.00000          1.00000
+ 24  0.90858         osd.24                                                                       up  1.00000          1.00000
+-10  9.08585     host pool-90f6bb5eca124118a7ad3609a2393af3-b7c9c9212845470382bf1fee0bc57308
+  4  0.90858         osd.4                                                                        up  1.00000          1.00000
+  9  0.90858         osd.9                                                                        up  1.00000          1.00000
+  8  0.90858         osd.8                                                                        up  1.00000          1.00000
+  5  0.90858         osd.5                                                                        up  1.00000          1.00000
+  3  0.90858         osd.3                                                                        up  1.00000          1.00000
+  2  0.90858         osd.2                                                                        up  1.00000          1.00000
+  1  0.90858         osd.1                                                                        up  1.00000          1.00000
+  0  0.90858         osd.0                                                                        up  1.00000          1.00000
+  7  0.90858         osd.7                                                                        up  1.00000          1.00000
+  6  0.90858         osd.6                                                                        up  1.00000          1.00000
+ -1 36.39954 root default
+ -2  9.09988     host ceph1
+  0  0.90999         osd.0                                                                        up  1.00000          1.00000
+  1  0.90999         osd.1                                                                        up  1.00000          1.00000
+  2  0.90999         osd.2                                                                        up  1.00000          1.00000
+  3  0.90999         osd.3                                                                        up  1.00000          1.00000
+  4  0.90999         osd.4                                                                        up  1.00000          1.00000
+  5  0.90999         osd.5                                                                        up  1.00000          1.00000
+  6  0.90999         osd.6                                                                        up  1.00000          1.00000
+  7  0.90999         osd.7                                                                        up  1.00000          1.00000
+  8  0.90999         osd.8                                                                        up  1.00000          1.00000
+  9  0.90999         osd.9                                                                        up  1.00000          1.00000
+ -3  9.09988     host ceph3
+ 20  0.90999         osd.20                                                                       up  1.00000          1.00000
+ 21  0.90999         osd.21                                                                       up  1.00000          1.00000
+ 22  0.90999         osd.22                                                                       up  1.00000          1.00000
+ 23  0.90999         osd.23                                                                       up  1.00000          1.00000
+ 24  0.90999         osd.24                                                                       up  1.00000          1.00000
+ 25  0.90999         osd.25                                                                       up  1.00000          1.00000
+ 26  0.90999         osd.26                                                                       up  1.00000          1.00000
+ 27  0.90999         osd.27                                                                       up  1.00000          1.00000
+ 28  0.90999         osd.28                                                                       up  1.00000          1.00000
+ 29  0.90999         osd.29                                                                       up  1.00000          1.00000
+ -4  9.09988     host ceph4
+ 30  0.90999         osd.30                                                                       up  1.00000          1.00000
+ 31  0.90999         osd.31                                                                       up  1.00000          1.00000
+ 32  0.90999         osd.32                                                                       up  1.00000          1.00000
+ 33  0.90999         osd.33                                                                       up  1.00000          1.00000
+ 34  0.90999         osd.34                                                                       up  1.00000          1.00000
+ 35  0.90999         osd.35                                                                       up  1.00000          1.00000
+ 36  0.90999         osd.36                                                                       up  1.00000          1.00000
+ 37  0.90999         osd.37                                                                       up  1.00000          1.00000
+ 38  0.90999         osd.38                                                                       up  1.00000          1.00000
+ 39  0.90999         osd.39                                                                       up  1.00000          1.00000
+ -5  9.09988     host ceph2
+ 10  0.90999         osd.10                                                                     down        0          1.00000
+ 11  0.90999         osd.11                                                                     down        0          1.00000
+ 12  0.90999         osd.12                                                                     down        0          1.00000
+ 13  0.90999         osd.13                                                                     down        0          1.00000
+ 14  0.90999         osd.14                                                                     down        0          1.00000
+ 15  0.90999         osd.15                                                                     down        0          1.00000
+ 16  0.90999         osd.16                                                                     down        0          1.00000
+ 17  0.90999         osd.17                                                                     down        0          1.00000
+ 18  0.90999         osd.18                                                                     down        0          1.00000
+ 19  0.90999         osd.19                                                                     down        0          1.00000
+
+
+[root@ceph1 shm]# lsblk
+NAME   MAJ:MIN RM   SIZE RO TYPE MOUNTPOINT
+sda      8:0    0 278.5G  0 disk
+├─sda1   8:1    0     2M  0 part
+├─sda2   8:2    0   500M  0 part /boot
+└─sda3   8:3    0   278G  0 part /
+sdb      8:16   0 446.1G  0 disk
+├─sdb1   8:17   0    35G  0 part /var/lib/ceph/omap/9
+├─sdb2   8:18   0  82.2G  0 part
+├─sdb3   8:19   0  82.2G  0 part
+├─sdb4   8:20   0  82.2G  0 part
+├─sdb5   8:21   0  82.2G  0 part
+└─sdb6   8:22   0  82.2G  0 part
+sdc      8:32   0 446.1G  0 disk
+├─sdc1   8:33   0    35G  0 part /var/lib/ceph/omap/6
+├─sdc2   8:34   0  82.2G  0 part
+├─sdc3   8:35   0  82.2G  0 part
+├─sdc4   8:36   0  82.2G  0 part
+├─sdc5   8:37   0  82.2G  0 part
+└─sdc6   8:38   0  82.2G  0 part
+sdd      8:48   0 446.1G  0 disk
+├─sdd1   8:49   0 441.1G  0 part
+└─sdd2   8:50   0     5G  0 part
+sde      8:64   0 930.4G  0 disk
+└─sde1   8:65   0 930.4G  0 part /var/lib/ceph/osd/ceph-4
+sdf      8:80   0 930.4G  0 disk
+└─sdf1   8:81   0 930.4G  0 part /var/lib/ceph/osd/ceph-0
+sdg      8:96   0 930.4G  0 disk
+└─sdg1   8:97   0 930.4G  0 part /var/lib/ceph/osd/ceph-9
+sdh      8:112  0 930.4G  0 disk
+└─sdh1   8:113  0 930.4G  0 part /var/lib/ceph/osd/ceph-5
+sdi      8:128  0 930.4G  0 disk
+└─sdi1   8:129  0 930.4G  0 part /var/lib/ceph/osd/ceph-6
+sdj      8:144  0 930.4G  0 disk
+└─sdj1   8:145  0 930.4G  0 part /var/lib/ceph/osd/ceph-7
+sdk      8:160  0 930.4G  0 disk
+└─sdk1   8:161  0 930.4G  0 part /var/lib/ceph/osd/ceph-8
+sdl      8:176  0 930.4G  0 disk
+└─sdl1   8:177  0 930.4G  0 part /var/lib/ceph/osd/ceph-1
+sdm      8:192  0 930.4G  0 disk
+└─sdm1   8:193  0 930.4G  0 part /var/lib/ceph/osd/ceph-2
+sdn      8:208  0 930.4G  0 disk
+├─sdn1   8:209  0 925.4G  0 part
+└─sdn2   8:210  0     5G  0 part
+sdo      8:224  0 930.4G  0 disk
+└─sdo1   8:225  0 930.4G  0 part /var/lib/ceph/osd/ceph-3
+sr0     11:0    1  1024M  0 rom
+
+

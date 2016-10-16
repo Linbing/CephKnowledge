@@ -1,0 +1,10 @@
+[root@ceph1 ~]# rbd -p pool-90f6bb5eca124118a7ad3609a2393af3 info volume-b5d342be-a464-4f6f-8ed1-73aa6f78c8b3
+rbd image 'volume-b5d342be-a464-4f6f-8ed1-73aa6f78c8b3':
+        size 3072 MB in 768 objects
+        order 22 (4096 kB objects)
+        block_name_prefix: rbd_data.132b395e690b56
+        format: 2
+        features: layering, striping
+        flags:
+        stripe unit: 4096 kB
+        stripe count: 1

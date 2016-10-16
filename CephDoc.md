@@ -95,4 +95,27 @@ $name: 展开为$type.$id
 
 $pid: 展开为进程id
 
-http://docs.ceph.com/docs/master/install/hardware-recommendations
+#### OS RECOMMENDATIONS
+
+Linux Kernel
+
+Ceph Kernel Client
+
+* 4.1.4 or later
+* 3.16.3 or later(rbd deadlock regression in 3.16.[0-2])
+* NOT 3.15.*(rbd deadlock regression)
+* 3.14
+
+These are considered pretty old, but if you must:
+
+* 3.10.*
+
+B-tree File system(btrfs)
+
+* If you use the btrfs file system with ceph, we recommend using a recent linux kernel(3.14 or later)
+
+[OS RECOMMENDATIONS](http://docs.ceph.com/docs/master/start/os-recommendations/)
+
+#### Ceph CPU Profiling
+
+[ceph cpu-profiling](http://docs.ceph.com/docs/master/rados/troubleshooting/cpu-profiling/)

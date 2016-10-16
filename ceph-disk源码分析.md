@@ -19,8 +19,8 @@ ceph-disk activate --mark-init sysvinit /dev/sdb
 一般在部署osd的时候，并没有直接调用ceph-disk命令，而是使用ceph-deploy或者ansible自动部署工具，在这些工具最终也是调用
 的ceph-disk来完成osd的部署的。一般在集群的osd出现故障需要将某个ods移除并重新加入集群的时候会直接用到ceph-disk命令。
 
-在部署完ceph集群后，比较常用的ceph-disk参数有list、 activate、activate-all和zap。下面就从ceph－disk的源码入手，
-着重分析这些参数的执行步骤及流程，另外还附加介绍下系统重启时是如何自动挂载osd的数据盘并启动osd进程的。
+在部署完ceph集群后，比较常用的ceph-disk参数有list、 activate。下面就从ceph－disk的源码入手，着重分析这些参数的执行
+步骤及流程，另外还附加介绍下系统重启时是如何自动挂载osd的数据盘并启动osd进程的。
 
 ## 二、ceph-disk list
 

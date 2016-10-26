@@ -103,16 +103,36 @@ Ceph Kernel Client
 
 * 4.1.4 or later
 * 3.16.3 or later(rbd deadlock regression in 3.16.[0-2])
-* NOT 3.15.*(rbd deadlock regression)
+* `NOT 3.15.*(rbd deadlock regression)`
 * 3.14
 
 These are considered pretty old, but if you must:
 
-* 3.10.*
+* `3.10.*`
 
 B-tree File system(btrfs)
 
 * If you use the btrfs file system with ceph, we recommend using a recent linux kernel(3.14 or later)
+
+## Development
+
+下载ceph源码后编译，执行`./install-deps.sh`安装依赖包，安装完成后执行`do_cmake.sh`生成Makefile，再
+执行make进行编译。
+
+编译后的文件在build目录下，运行测试集群：
+
+```sh
+cd build
+../src/vstart.sh -d -x -n -l
+```
+
+生成rpm包，先执行`make-srpm.sh`来生成rpm源码包，安装该源码包。再安装rpm-build
+
+```sh
+yum install rpm-build
+```
+
+之后在rpmbuild/SPECS中执行`rpm -ba ceph.spec`
 
 [OS RECOMMENDATIONS](http://docs.ceph.com/docs/master/start/os-recommendations/)
 

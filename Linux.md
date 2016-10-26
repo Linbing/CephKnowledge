@@ -28,3 +28,7 @@ blockdev --getpbsz /dev/sdx
 ### 7. generate_randfile
 
 ### 8. hping3
+
+### 9. ulimit
+
+[增大linux系统的openfiles上限](http://www.chengweiyang.cn/2015/11/14/how-to-enlarge-linux-open-files-upper-cell/)

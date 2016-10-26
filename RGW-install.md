@@ -1,3 +1,6 @@
+# 安装CephRGW
+
+```sh
 #!/bin/bash
 yum clean all
 
@@ -85,3 +88,4 @@ EOF
 systemctl restart httpd.service
 #启动radosgw:
 radosgw -c /etc/ceph/ceph.conf -n client.radosgw.gateway
+```

@@ -1,6 +1,6 @@
 # Ceph知识总结
 
-![集群架构](stack.png)
+![集群架构](img/stack.png)
 
 Ceph基于rados提供了无限可扩展的存储集群，集群主要包括两种类型的后台进程osd和mon，monitor主要负责维护cluster map，
 osd会检测自己和邻居的状态，并上报给monitor。
@@ -8,7 +8,7 @@ osd会检测自己和邻居的状态，并上报给monitor。
 典型的RADOS部署架构由少量的Monitor监控器以及大量的OSD存储设备组成，它能够在动态变化的基于异质结构的存储设备集群之上提
 供一种稳定的、可扩展的、高性能的单一逻辑对象存储接口。RADOS系统的架构如图所示：
 
-![rados](rados.png)
+![rados](img/rados.png)
 
 ## Ceph集群图：
 
@@ -51,7 +51,7 @@ librbd: ceph的块存储库，利用Rados提供的API实现对块设备的管理
 
 Ceph系统中的寻址流程如下图所示：
 
-![寻址流程](寻址流程.png)
+![寻址流程](img/寻址流程.png)
 
 上图中左侧的几个概念说明如下：
 
@@ -133,7 +133,6 @@ OSD的物理位置映射策略；另一方面是因为CRUSH具有特殊的“稳
 至此为止，Ceph通过三次映射，完成了从file到object、PG和OSD整个映射过程。通观整个过程，可以看到，这里没有任何的全局性查
 表操作需求。至于唯一的全局性数据结构cluster map，它的维护和操作都是轻量级的，不会对系统的可扩展性、性能等因素造成不良影响。
 
-
 从上可以看出，引入PG的好处至少有二：一方面实现了object和OSD之间的动态映射，从而为Ceph的可靠性、自动化等特性的实现留下
 了空间；另一方面也有效简化了数据的存储组织，大大降低了系统的维护管理开销。理解这一点，对于彻底理解Ceph的对象寻址机制，是
 十分重要的。
@@ -147,7 +146,7 @@ PG被映射到3个OSD上。
 
 基于上述假定，则file写入流程可以被下图表示：
 
-![数据操作流程](数据操作流程.png)
+![数据操作流程](img/数据操作流程.png)
 
 如图所示，当某个client需要向Ceph集群写入一个file时，首先需要在本地完成上述的寻址流程，将file变为一个object，然后找出
 存储该object的一组三个OSD。这三个OSD具有各自不同的序号，序号最靠前的那个OSD就是这一组中的Primary OSD，而后两个则依次
@@ -158,7 +157,7 @@ PG被映射到3个OSD上。
 发送确认信息（步骤4、5）。当Primary OSD确信其他两个OSD的写入完成后，则自己也完成数据写入，并向client确认object写入
 操作完成（步骤6）。
 
-之所以采用这样的写入流程，本质上是为了保证写入过程中的可靠性，尽可能避免造成数据丢失。同时，由于client只需要向Primary 
+之所以采用这样的写入流程，本质上是为了保证写入过程中的可靠性，尽可能避免造成数据丢失。同时，由于client只需要向Primary
 OSD发送数据，因此，在Internet使用场景下的外网带宽和整体访问延迟又得到了一定程度的优化。
 
 当然，这种可靠性机制必然导致较长的延迟，特别是，如果等到所有的OSD都将数据写入磁盘后再向client发送确认信号，则整体延迟可
@@ -253,17 +252,15 @@ cluster map的差异发送给另外一方。
 与数据访问的。特别的，基于这个机制，事实上可以自然而然的完成自动化的数据备份、数据re-balancing、故障探测和故障恢复，并
 不需要复杂的特殊设计。这一点确实让人印象深刻。
 
-
 ## Ceph模块间的关系
 
-![模块关系图](OSD相关的软件模块视图.png)
+![模块关系图](img/OSD相关的软件模块视图.png)
 
-
-### MSG:
+### MSG
 
 上图中的MSG指的是Messenger类的实例，在OSD中使用的是其子类SimpleMessenger，其继承关系如下：
 
-![Messenger类图](class_messenger.png)
+![Messenger类图](img/class_messenger.png)
 
 #### 启动Messenger
 
@@ -326,10 +323,9 @@ boost::scoped_ptr<Throttle> client_msg_throttler( new Throttle(g_ceph_context, "
 
 `ms_hb_front_server`绑定到`g_conf->hb_front_addr`上
 
-
 #### Messenger的作用
 
-![OSD,Monitor和Client之间的连接](osd_messenger.jpg)
+![OSD,Monitor和Client之间的连接](img/osd_messenger.jpg)
 
 从上可以看出，对于OSD服务而言，启动了多个Messenger监听器，每个监听器的作用如下，其中OSD节点会监听
 public、cluster、front和back四个端口。
@@ -338,13 +334,11 @@ public、cluster、front和back四个端口。
 
 * cluster监听处理来自OSD peer的连接
 
-* 另外，OSD单独创建了一个名为hbclient的Messenger，作为心跳的客户端，单独用来建立连接发送心跳报文，心跳
-优先发送给back连接
-
+* 另外，OSD单独创建了一个名为hbclient的Messenger，作为心跳的客户端，单独用来建立连接发送心跳报文，心跳优先发送给back连接
 
 #### 消息分发方式
 
-![MSG通信模型](MSG_DISP.png)
+![MSG通信模型](img/MSG_DISP.png)
 
 总体上，Ceph的消息处理框架是发布者订阅者的设计结构。Messenger担当发布者的角色，Dispatcher担当订阅者的角色。Messenger
 将接收到的消息通知给已注册的Dispatcher，由Dispatcher完成具体的消息处理。
@@ -369,7 +363,7 @@ Pipe的写线程将消息放入out_q队列，按照消息的优先级从高到�
 Ceph的块存储有两种使用途径，一种是利用librbd，另一种是使用内核模块。第一种主要为虚拟机提供块存储设备，第二种主要为
 Host提供块设备支持，这两种途径的接口实现完全不同。librbd在ceph源码里已经提供，而且更稳定，也是ceph应用场景最广泛的。
 
-![qemu_rbd](qemu_rbd.png)
+![qemu_rbd](img/qemu_rbd.png)
 
 kvm虚拟机使用rbd设备：
 
@@ -516,7 +510,7 @@ pg的副本有主从的角色，主负责协调整个peering过程，大致流�
 
 ### recovery过程
 
-#### recovery的启动时机 
+#### recovery的启动时机
 
 recovery是对已知的副本不一致或者副本数不足进行修复。以pg为单位进行操作。大概有三个启动时机：
 
@@ -534,11 +528,11 @@ peering在某个pg由degrade状态重新恢复到active状态后启动。通过�
 少的的放到pg\_log对象的missing结构中。Replica缺少的放到peer\_missing结构中。
 Recovery就是修复missing和peer_missing中的oid。
 
-TODO ![Recovery流程图]()
+TODO Recovery流程图
 
 Replica修复和Primary修复流程图
 
-TODO ![Replica修复和Primary修复流程图]()
+TODO Replica修复和Primary修复流程图
 
 #### scrub后的recovery
 
@@ -556,7 +550,7 @@ Scrub后，会判断是否需要recovery。日常定时启动的scrub是不会�
 
 #### 读写操作前的Recovery
 
-TODO ![读写操作前的Recovery流程图]()
+TODO 读写操作前的Recovery流程图
 
 ## 参考
 

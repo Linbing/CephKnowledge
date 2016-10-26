@@ -67,6 +67,14 @@ rpm -vih http://mirrors.sohu.com/fedora-epel/7/x86_64/e/epel-release-7-2.noarch.
 yum install ceph-deploy ceph
 ```
 
+### 清除集群残留的文件
+
+```sh
+umount /var/lib/ceph/osd/*
+rm -rfv /etc/ceph/ceph.*
+rm -rfv /var/lib/ceph/*/*
+```
+
 ### 磁盘初始化
 
 安装sgdisk
@@ -103,7 +111,7 @@ ceph-deploy new cephnode11 cephnode12 cephnode13
 创建monitor
 
 ```sh
-ceph-deploy mon create cephnode11 cephnode12 cephnode13
+ceph-deploy --overwrite-conf mon create cephnode11 cephnode12 cephnode13
 ```
 
 初始化mon
@@ -131,3 +139,4 @@ ceph-deploy osd create osdserver:sdb:/dev/sdc1
 ```sh
 ceph-deploy admin cephnode11 cephnode12 cephnode13
 ```
+

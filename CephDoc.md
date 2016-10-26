@@ -134,6 +134,24 @@ yum install rpm-build
 
 之后在rpmbuild/SPECS中执行`rpm -ba ceph.spec`
 
+### 安装编译生成的rpm包
+
+```sh
+yum install java boost-date-time boost-python
+
+rpm -ivh ceph-base* ceph-osd* ceph-mds* ceph-mgr* ceph-mon* ceph-common* \
+ceph-selinux* librbd* librados* libcephfs* librgw* python-cephfs* python-rados* python-rbd*
+```
+
+### 删除ceph包
+
+```sh
+yum remove ceph ceph-common ceph-base ceph-deploy 
+yum remove python-cephfs python-rados 
+yum remove librados2 librbd1 libcephfs1 libradosstriper1
+```
+
+
 [OS RECOMMENDATIONS](http://docs.ceph.com/docs/master/start/os-recommendations/)
 
 #### Ceph CPU Profiling

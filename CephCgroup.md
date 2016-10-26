@@ -68,7 +68,7 @@ Cgroups适用于多种应用场景，从单个进程的资源控制，到实现�
 在CentOS系统中，安装了libcgroup-tools后，就能使用其提供的工具来进行资源限制，另外，CentOS7中使用了systemd来替代之
 前版本的sysvinit启动方式，并在system启动脚本中加入了对cgroup的支持，如下图所示：
 
-![(systemd架构图)](systemd_arch.png)
+![(systemd架构图)](img/systemd_arch.png)
 
 由于systemd对cgroup的支持并不完善，所以一般还是推荐安装libcgroup-tools来作为临时解决方案，这里我将在systemd中使用
 libcgroup-tools来进行测试，实际效果跟使用cgexec的效果是一样的，测试代码如下:

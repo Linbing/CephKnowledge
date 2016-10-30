@@ -32,3 +32,7 @@ blockdev --getpbsz /dev/sdx
 ### 9. ulimit
 
 [增大linux系统的openfiles上限](http://www.chengweiyang.cn/2015/11/14/how-to-enlarge-linux-open-files-upper-cell/)
+
+### 10. tcprewrite
+
+[tcprewrite](http://momomoxiaoxi.com/2016/01/25/Tcpreplay/)

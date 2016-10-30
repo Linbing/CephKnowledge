@@ -114,6 +114,27 @@ B-tree File system(btrfs)
 
 * If you use the btrfs file system with ceph, we recommend using a recent linux kernel(3.14 or later)
 
+#### Journal Setting(Journal Config Reference)
+
+Ceph使用journal的两个原因：速度和稳定性
+
+* 速度：journal使得osd进程能够更快地提交小块数据的写入操作。将小块随机IO合并为顺序IO
+
+* 稳定性：
+
+Ceph OSD支持下列journal配置：
+
+* journal dio: 启用journal的直接写入模式，需要`journal block align`设置为true
+
+* journal aio: 启用libaio异步写journal，需要`journal dio`设置为true
+
+* journal max write bytes: journal每次写入的最大字节数
+
+* journal max write entries: journal每次写入的最大条目数
+
+* journal queue max ops: 每次允许在队列中的最大操作数
+
+
 ## Development
 
 下载ceph源码后编译，执行`./install-deps.sh`安装依赖包，安装完成后执行`do_cmake.sh`生成Makefile，再

@@ -22,6 +22,11 @@
 
 [Ceph中的IO模式分析](http://ceph.org.cn/2016/05/02/ceph%E7%9A%84io%E6%A8%A1%E5%BC%8F%E5%88%86%E6%9E%90/)
 
+[关于Ceph现状与未来的一些思考](http://www.infoq.com/cn/articles/some-thinking-about-the-present-situation-and-future-of-ceph)
+
+[Ceph基于pglog的一致性协议](http://bbs.ceph.org.cn/article/54)
+
+
 ### Ceph Papers
 
 [Sage weil](http://ceph.com/papers/weil-thesis.pdf)

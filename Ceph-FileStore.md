@@ -12,4 +12,11 @@
 
 3.无日志的方式：在这种情况下，数据之间写入并同步到磁盘中。这种模式下只支持append模式的写入，不支持随机写。
 
+[Ceph NewStore存储引擎介绍](https://www.cnblogs.com/wuhuiyuan/p/ceph-newstore-intro.html?hmsr=toutiao.io&utm_medium=toutiao.io&utm_source=toutiao.io)
+相关实现: [github](https://github.com/yxgup/ceph/commits/omap_indexed_compound)
+
+
+
+[The Ceph ObjectStore API](http://irq0.org/articles/ceph/objectstore)
+[An  Evaluation of Object Name Hash](http://irq0.org/articles/ceph/object_name_hashing)
 [Ceph OS模块介绍及读写流程分析](http://www.voidcn.com/blog/changtao381/article/p-4364519.html)

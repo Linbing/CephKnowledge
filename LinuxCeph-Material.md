@@ -26,6 +26,8 @@
 
 [Ceph基于pglog的一致性协议](http://bbs.ceph.org.cn/article/54)
 
+[ A Programmable Metadata Load Balancer for the Ceph File System](https://www.soe.ucsc.edu/sites/default/files/technical-reports/UCSC-SOE-15-10.pdf)
+
 
 ### Ceph Papers
 

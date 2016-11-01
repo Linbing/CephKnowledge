@@ -45,10 +45,90 @@ Finisher队列里
 
 日志的同步：
 
-在FileStore::mount方法中，会创建sync线程 sync_thread.create()，该线程的入口函数为：void FileStore::sync_entry()
+在FileStore::mount方法中，会创建sync线程 `sync_thread.create()`，该线程的入口函数为：void FileStore::sync_entry()
 
 该函数定期执行同步操作，当同步时，调用tp.pause使FileStore的op_wq的线程池停止，等待正在应用的日志完成。然后调用fsync
 同步内存中的数据到数据盘，当同步完成后，就可以丢弃相应的日志，释放相应的日志空间。
+
+日志数据：
+一系列的事务被传递到日志。在日志处理过程中，首先用encoding.h中定义的事务函数编码这些事务。每种类型的事务都在
+ObjecctStore.h中定义了自己的解码器。需要注意的是日志项中不仅包括元数据，还包含IO数据。也就是说，一个写事务包括
+了它的IO数据。事务编码后，传递到日志也就被当作一个不透明的数据块。
+
+Metadata Only Journal Mode:
+RADOS - METADATA-ONLY JOURNAL MODE
+Summary
+Currently the Ceph community is thinking of eliminating the double write
+penalty of write ahead logging, newstore is a great design which implements
+create, append operations in an copy on read way, while maintaining all
+the original semantics. This makes newstore a general purpose optimization,
+especially suitable for the write once scenarios. Metadata-only journal mode
+intends to do in a more aggressive way, that is, not journal object data at all.
+This applies to two major kinds of situations, one is that the atomicity for
+object data modification may not need, for example, RBD to simulate a disk
+in cloud platform. The second is those double journaling situations, for example,
+cache tiering, while cache pool has already provided the durability, when dirty
+objects are written back, they theoretically need not go through the journaling
+process of base pool, since the flusher could always replay the write operation.
+Metadata-only journal mode, to some extent, resembles the data=ordered journal
+mode in ext4. With such journal mode is on, object data are written directly to
+their ultimate location, when data written finished, metadata are written into the
+journal. It guarantees the consistency in terms of RADOS name space, and the data
+consistency among object copies. However, the object data may not be correct.
+Later we will demonstrate that this rarely happens.
+
+Owners
+
+Li Wang (liwang@ubuntukylin.com)
+Yunchuan Wen (yunchuanwen@ubuntukylin.com)
+Name
+
+Interested Parties
+If you are interested in contributing to this blueprint, or want to be a "speaker" during the Summit session, list your name here.
+Name (Affiliation)
+Name (Affiliation)
+Name
+
+Current Status
+Please describe the current status of Ceph as it relates to this blueprint. Is there something that this replaces? Are there current features that are related?
+
+Detailed Description
+We have two options,
+The first option
+
+1 Write object data
+2 Commit metadata to journal
+3 Submit metadata
+
+This option makes minimal revision to current framework, enjoy the simplicity. In most cases, this will not introduce problem relying
+on the powerful peering and client resent mechanism. The only problematic situation is PG down as a whole, and client also down,
+ in that case, the guest fs in the vm will possibly recover it to consistent by fsck and journal replaying. So it just to leave scrub to find
+ and fix this by randomly synchronizing one of the copies to others.
+
+The second option
+
+1 Commit transaction A into journal, to add a UNSTABLE flag in object metadata, add a pglog record, and update the pglog version
+2 Write data to object
+3 Commit transaction B into journal, to update metadata, delete the flag, add a pglog record, and update the pglog version
+4 Submit metadata
+
+As long as one osd in the pg has succeeded, the pg will be recovered to
+a consistent and correct state by peering; If the pg down as a whole,
+there are the following situations, 
+(1) None of the osds finishes step 1, nothing happen; 
+(2) At least one of the osds finishes step 3, journaling and
+peering will recover the pg to a consistent and correct state; 
+(3) none of the osds has finished step (3), and at least one of the osds has 
+finished step (1), this is the only potentially problematical situation, 
+in this case, peering will synchronize the UNSTABLE flag to other osds in the pg. 
+For object read and write, if found UNSTABLE flag in object metadata, it will let the operation wait and
+start a recovery to randomly choose one osd to synchronize its 
+content of written area to other copies. During scrub, it will also check the flag and do the recvery.
+
+Work items
+This section should contain a list of work tasks created by this blueprint. Please include engineering tasks as well as related build/release
+and documentation work. If this blueprint requires cleanup of deprecated features, please list those tasks as well.
+[blueprint](http://tracker.ceph.com/projects/ceph/wiki/Rados_-_metadata-only_journal_mode/16)
 
 ### Journal机制分析
 
@@ -68,3 +148,5 @@ Finisher队列里
 [Ceph OSD日志分析](http://bbs.ceph.org.cn/article/42)
 [Ceph数据存储之路 Object的attr和omap操作](https://my.oschina.net/u/2460844/blog/604530)
 [Ceph NewStore存储引擎介绍](https://www.cnblogs.com/wuhuiyuan/p/ceph-newstore-intro.html?hmsr=toutiao.io&utm_medium=toutiao.io&utm_source=toutiao.io)
+
+[Ceph Journal](http://irq0.org/articles/ceph/journal)
